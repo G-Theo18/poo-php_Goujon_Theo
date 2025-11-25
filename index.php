@@ -102,6 +102,25 @@ final class Lobby
     }
 }
 
+final class BlitzPlayer extends AbstractPlayer
+{
+    public function __construct(string $name)
+    {
+        parent::__construct($name, 1200.0);
+    }
+
+    private function probabilityAgainst(AbstractPlayer $player): float
+    {
+        return 1 / (1 + (10 ** (($player->getRatio() - $this->getRatio()) / 400)));
+    }
+
+    public function updateRatioAgainst(AbstractPlayer $player, int $result): void
+    {
+        $this->ratio += 4 * 32 * ($result - $this->probabilityAgainst($player));
+    }
+}
+
+
 $greg = new Player('greg', 400);
 $jade = new Player('jade', 476);
 
@@ -111,3 +130,4 @@ $lobby->addPlayers($greg, $jade);
 var_dump($lobby->findOponents($lobby->queuingPlayers[0]));
 
 exit(0);
+
