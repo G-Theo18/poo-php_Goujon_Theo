@@ -1,77 +1,101 @@
 <?php
 
-class Encounter
+/*
+ * This file is part of the OpenClassRoom PHP Object Course.
+ *
+ * (c) Grégoire Hébert <contact@gheb.dev>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
+class Lobby
 {
-    public const RESULT_WINNER = 1;
-    public const RESULT_LOSER = -1;
-    public const RESULT_DRAW = 0;
+    /** @var array<QueuingPlayer> */
+    public array $queuingPlayers = [];
 
-    public const RESULT_POSSIBILITIES = [
-        self::RESULT_WINNER,
-        self::RESULT_LOSER,
-        self::RESULT_DRAW,
-    ];
-
-    public const K_FACTOR = 32;
-
-    public static function probabilityAgainst(int $levelPlayerOne, int $againstLevelPlayerTwo): float
+    public function findOponents(QueuingPlayer $player): array
     {
-        return 1 / (1 + (10 ** (($againstLevelPlayerTwo - $levelPlayerOne) / 400)));
+        $minLevel = round($player->getRatio() / 100);
+        $maxLevel = $minLevel + $player->getRange();
+
+        return array_filter(
+            $this->queuingPlayers,
+            static function (QueuingPlayer $potentialOponent) use ($minLevel, $maxLevel, $player) {
+                $playerLevel = round($potentialOponent->getRatio() / 100);
+
+                return $player !== $potentialOponent
+                    && ($minLevel <= $playerLevel)
+                    && ($playerLevel <= $maxLevel);
+            }
+        );
     }
 
-    public static function setNewLevel(int &$levelPlayerOne, int $againstLevelPlayerTwo, int $playerOneResult): void
+    public function addPlayer(Player $player): void
     {
-        if (!in_array($playerOneResult, self::RESULT_POSSIBILITIES, true)) {
-            trigger_error(
-                sprintf(
-                    'Invalid result. Expected %s',
-                    implode(' or ', self::RESULT_POSSIBILITIES)
-                )
-            );
+        $this->queuingPlayers[] = new QueuingPlayer($player);
+    }
+
+    public function addPlayers(Player ...$players): void
+    {
+        foreach ($players as $player) {
+            $this->addPlayer($player);
         }
-
-        $expectedScore = self::probabilityAgainst($levelPlayerOne, $againstLevelPlayerTwo);
-
-        $levelPlayerOne += (int) (self::K_FACTOR * ($playerOneResult - $expectedScore));
     }
 }
 
 class Player
 {
-    private int $level;
-
-    public function __construct(int $level)
+    public function __construct(protected string $name, protected float $ratio = 400.0)
     {
-        $this->level = $level;
     }
 
-    public function getLevel(): int
+    public function getName(): string
     {
-        return $this->level;
+        return $this->name;
     }
 
-    public function setLevel(int $level): void
+    private function probabilityAgainst(self $player): float
     {
-        $this->level = $level;
+        return 1 / (1 + (10 ** (($player->getRatio() - $this->getRatio()) / 400)));
+    }
+
+    public function updateRatioAgainst(self $player, int $result): void
+    {
+        $this->ratio += 32 * ($result - $this->probabilityAgainst($player));
+    }
+
+    public function getRatio(): float
+    {
+        return $this->ratio;
     }
 }
 
-$greg = new Player(400);
-$jade = new Player(800);
+class QueuingPlayer extends Player
+{
+    protected int $range;
 
-echo sprintf(
-    'Greg a %.2f%% de chance de gagner face à Jade',
-    Encounter::probabilityAgainst($greg->getLevel(), $jade->getLevel()) * 100
-) . PHP_EOL;
+    public function __construct(Player $player)
+    {
+        parent::__construct($player->getName(), $player->getRatio());
+        $this->range = 1;
+    }
 
-Encounter::setNewLevel($greg->getLevel(), $jade->getLevel(), Encounter::RESULT_WINNER);
-Encounter::setNewLevel($jade->getLevel(), $greg->getLevel(), Encounter::RESULT_LOSER);
+    public function getRange(): int
+    {
+        return $this->range;
+    }
+}
 
-$greg->setLevel($greg->getLevel());
-$jade->setLevel($jade->getLevel());
+$greg = new Player('greg', 400);
+$jade = new Player('jade', 476);
 
-echo sprintf(
-    'Les niveaux des joueurs ont évolué vers %s pour Greg et %s pour Jade',
-    $greg->getLevel(),
-    $jade->getLevel()
-);
+$lobby = new Lobby();
+$lobby->addPlayers($greg, $jade);
+
+var_dump($lobby->findOponents($lobby->queuingPlayers[0]));
+
+exit(0);
+
