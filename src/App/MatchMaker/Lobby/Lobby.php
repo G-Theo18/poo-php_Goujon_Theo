@@ -24,15 +24,15 @@ class Lobby implements LobbyInterface
                 $playerLevel = round($potentialOponent->getRatio() / 100);
 
                 return $player !== $potentialOponent &&
-                       ($minLevel <= $playerLevel) &&
-                       ($playerLevel <= $maxLevel);
+                    ($minLevel <= $playerLevel) &&
+                    ($playerLevel <= $maxLevel);
             }
         );
     }
 
     public function addPlayer(PlayerInterface $player): void
     {
-        $this->queuingPlayers[] = new QueuingPlayer($player->getName(), $player->getRatio());
+        $this->queuingPlayers[] = new QueuingPlayer($player);
     }
 
     public function addPlayers(PlayerInterface ...$players): void

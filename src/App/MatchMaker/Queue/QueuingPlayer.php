@@ -4,17 +4,38 @@ declare(strict_types=1);
 
 namespace App\MatchMaker\Queue;
 
-use App\MatchMaker\Player\Player;
+use App\MatchMaker\Player\PlayerInterface;
 
-class QueuingPlayer extends Player implements QueuingPlayerInterface
+class QueuingPlayer implements QueuingPlayerInterface
 {
+    private PlayerInterface $player;
     private int $range = 1;
     private \DateTimeImmutable $queuedAt;
 
-    public function __construct(string $name, float $ratio = 400.0)
+    public function __construct(PlayerInterface $player)
     {
-        parent::__construct($name, $ratio);
+        $this->player = $player;
         $this->queuedAt = new \DateTimeImmutable();
+    }
+
+    public function getPlayer(): PlayerInterface
+    {
+        return $this->player;
+    }
+
+    public function getName(): string
+    {
+        return $this->player->getName();
+    }
+
+    public function getRatio(): float
+    {
+        return $this->player->getRatio();
+    }
+
+    public function updateRatioAgainst(PlayerInterface $player, int $result): void
+    {
+        $this->player->updateRatioAgainst($player, $result);
     }
 
     public function getQueuedAt(): \DateTimeImmutable
